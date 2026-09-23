@@ -8,6 +8,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="picture/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="reference.css">
   <title>GitHub Music Player</title>
 </head>
 <body>
@@ -19,6 +20,7 @@
       <div class="global-search"><span>⌕</span><input id="search" type="search" placeholder="搜尋歌曲、Artist、Album、Genre" autocomplete="off"><kbd>/</kbd></div>
       <div class="top-actions"><button id="syncBtn" class="icon-btn" title="Sync GitHub">↻</button><button id="themeBtn" class="icon-btn" title="Theme">◐</button><button id="settingsBtn" class="icon-btn" title="Settings">⚙</button></div>
     </header>
+    <nav class="reference-tabs" aria-label="Library tabs"><a href="#all" data-view="all" class="active">全部歌曲</a><a href="#favorites" data-view="favorites">我的最愛</a></nav>
     <div class="layout">
       <aside id="sidebar" class="sidebar">
         <nav class="nav primary-nav">
