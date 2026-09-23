@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#090b12">
-  <meta name="description" content="GitHub Music Player - a portable, offline-first music library">
+  <meta name="description" content="by幻風 線上播放器｜從 GitHub Repository 讀取音樂，在各設備上的雲端播放器。">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="picture/logo.png" type="image/svg+xml">
-  <title>GitHub Music Player</title>
+  <title>by幻風｜線上播放器</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Material+Icons+Round" rel="stylesheet">
@@ -161,7 +161,7 @@ body{background-size:cover}
   <div id="app" class="app hidden">
     <header class="topbar">
       <button id="mobileMenu" class="icon-btn" aria-label="Menu"><span class="material-icons-round">menu</span></button>
-      <a class="brand" href="#home" data-view="home"><img src="picture/logo.png" alt=""><span>GitHub Music</span></a>
+      <a class="brand" href="#home" data-view="home"><img src="picture/logo.png" alt=""><span>Music player</span></a>
       <div class="global-search"><span class="material-icons-round">search</span><input id="search" type="search" placeholder="搜尋歌曲、Artist、Album、Genre" autocomplete="off"><kbd>/</kbd></div>
       <div class="top-actions"><button id="syncBtn" class="icon-btn" title="Sync GitHub"><span class="material-icons-round">sync</span></button><button id="themeBtn" class="icon-btn" title="Theme"><span class="material-icons-round">dark_mode</span></button><button id="settingsBtn" class="icon-btn" title="Settings"><span class="material-icons-round">settings</span></button></div>
     </header>
@@ -412,8 +412,43 @@ body{background-size:cover}
   const baseUpdatePlayer=updatePlayer;
   updatePlayer=function(){baseUpdatePlayer();applyCustomThemeSurface();};
   const normalizeThemeOptions=()=>{const select=$('#themeSelect');if(!select||select.dataset.uiThemeOptions)return;if(!select.dataset.uiThemeOptions){select.innerHTML='<option value="dark">Black</option><option value="light">White</option><option value="custom">Custom background</option>';select.dataset.uiThemeOptions='1';select.value=['dark','light','custom'].includes(state.settings.theme)?state.settings.theme:'dark';}};
-  if(window.MutationObserver){const themeObserver=new MutationObserver(normalizeThemeOptions);themeObserver.observe($('#modal'),{childList:true,subtree:true});}
+  const normalizeSettingsButtons=()=>{const backupButton=$('#exportBtn');if(backupButton)backupButton.innerHTML=icon('backup')+' Backup';};
+  if(window.MutationObserver){const themeObserver=new MutationObserver(()=>{normalizeThemeOptions();normalizeSettingsButtons();});themeObserver.observe($('#modal'),{childList:true,subtree:true});}
   setTimeout(normalizeThemeOptions,0);
+  setTimeout(normalizeSettingsButtons,0);
+  function updateSongListPresentation(){
+    const list=$('#songList');
+    if(!list)return;
+    let header=$('#songListHeader');
+    if(!header){header=document.createElement('div');header.id='songListHeader';header.className='song-list-head';header.innerHTML='<span></span><span></span><span>Title</span><span>Artist</span><span>Duration</span><span></span>';list.parentNode.insertBefore(header,list);}
+    queryAll('#songList .song-row').forEach(row=>{const artist=row.querySelector('.song-artist'),column=row.querySelector('.song-genre');if(artist&&column&&column.textContent!==artist.textContent)column.textContent=artist.textContent;});
+  }
+  const baseRenderView=renderView;
+  renderView=function(){baseRenderView();updateSongListPresentation();};
+  if(window.MutationObserver){const listObserver=new MutationObserver(updateSongListPresentation);listObserver.observe($('#songList'),{childList:true});}
+  setTimeout(updateSongListPresentation,0);
+  if(state.settings.heroTitle==='Every beat. Yours.'){
+    state.settings.heroTitle='by\u5e7b\u98a8';
+    state.settings.heroSubtitle='\u7dda\u4e0a\u64ad\u653e\u5668';
+    state.settings.heroDesc='\u5f9e GitHub Repository \u8b80\u53d6\u97f3\u6a02\uff0c\u5728\u624b\u6a5f\u63a7\u5236\u7684\u79c1\u4eba\u64ad\u653e\u5668\u3002';
+    saveState();
+  }
+  function ensureDashboardTonearm(){const stage=document.querySelector('.dashboard-vinyl');if(!stage)return null;let arm=stage.querySelector('.dashboard-tonearm');if(!arm){arm=document.createElement('div');arm.className='dashboard-tonearm';arm.innerHTML='<i></i>';stage.appendChild(arm);}return arm;}
+  function syncDashboardVinyl(){const record=document.querySelector('.dashboard-vinyl .vinyl'),arm=ensureDashboardTonearm();if(record){record.classList.toggle('paused',!state.isPlaying);record.style.animationPlayState=state.isPlaying?'running':'paused';}if(arm){const ratio=audio.duration?audio.currentTime/audio.duration:0;arm.style.transform=state.isPlaying?'rotate('+(9+13*ratio)+'deg)':'rotate(28deg)';}}
+  function syncDashboardVinylCover(){const record=document.querySelector('.dashboard-vinyl .vinyl'),label=record?.querySelector('.vinyl-label'),song=songById(state.playback.current);if(label){label.style.backgroundImage=`url("${cover(song||{})}")`;label.style.backgroundSize='cover';label.style.backgroundPosition='center';}}
+  const baseRenderHome=renderHome;
+  renderHome=function(){baseRenderHome();syncDashboardVinyl();syncDashboardVinylCover();};
+  const themedUpdatePlayer=updatePlayer;
+  updatePlayer=function(){themedUpdatePlayer();syncDashboardVinyl();syncDashboardVinylCover();const labels={off:'\u4e0d\u91cd\u8907',all:'\u5168\u90e8\u91cd\u8907',one:'\u91cd\u8907\u672c\u66f2'},label=labels[state.playback.repeat]||labels.off;['repeatBtn','mobileRepeat'].forEach(id=>{const button=$('#'+id);if(button)button.title=label;});};
+  cycleRepeat=function(){state.playback.repeat=state.playback.repeat==='off'?'all':state.playback.repeat==='all'?'one':'off';saveState();updatePlayer();toast({off:'\u4e0d\u91cd\u8907',all:'\u5168\u90e8\u91cd\u8907',one:'\u91cd\u8907\u672c\u66f2'}[state.playback.repeat]);};
+  let activeLyrics=[],activeLyricsSong=null,activeLyricIndex=-1;
+  function parseLrc(text){const lines=[];String(text||'').split(/\r?\n/).forEach(line=>{const matches=[...line.matchAll(/\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g)];const content=line.replace(/(?:\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\])+/, '').trim();matches.forEach(m=>{const fraction=String(m[3]||'').padEnd(3,'0').slice(0,3);lines.push({time:(+m[1]*60)+(+m[2])+(+(fraction||0)/1000),text:content});});});return lines.filter(x=>x.text).sort((a,b)=>a.time-b.time);}
+  function syncLyrics(){if(!activeLyrics.length||activeLyricsSong!==state.playback.current)return;let index=-1;for(let i=0;i<activeLyrics.length;i++){if(audio.currentTime>=activeLyrics[i].time)index=i;else break;}if(index===activeLyricIndex)return;activeLyricIndex=index;const panel=$('#lyricsPanel');if(!panel)return;queryAll('#lyricsPanel .lyric-line').forEach((el,i)=>el.classList.toggle('active',i===index));const active=panel.querySelector('.lyric-line.active');if(active)active.scrollIntoView({behavior:'smooth',block:'center'});}
+  showLyrics=async function(s){let panel=$('#lyricsPanel');if(!panel){panel=document.createElement('div');panel.id='lyricsPanel';panel.className='lyrics-panel';const area=document.querySelector('#player-view .player-controls-area');if(area)area.insertBefore(panel,area.firstChild);}activeLyrics=[];activeLyricsSong=s?.id||null;activeLyricIndex=-1;panel.textContent='\u8b80\u53d6\u6b4c\u8a5e\u4e2d...';try{const path=s.path.replace(/\.[^.]+$/i,'.lrc'),response=await fetch(rawUrl(path));if(!response.ok)throw 0;const text=await response.text();activeLyrics=parseLrc(text);if(activeLyrics.length){panel.innerHTML=activeLyrics.map(x=>'<div class="lyric-line">'+esc(x.text)+'</div>').join('');syncLyrics();}else panel.textContent=text||'\u627e\u4e0d\u5230 LRC \u6b4c\u8a5e';toast('\u6b4c\u8a5e\u5df2\u8f09\u5165');}catch(_){panel.textContent='\u627e\u4e0d\u5230 LRC \u6b4c\u8a5e';toast('LRC \u4e0d\u5b58\u5728');}};
+  audio.addEventListener('timeupdate',syncLyrics);
+  function dashboardProgressLoop(){if(!audio.paused){syncDashboardVinyl();requestAnimationFrame(dashboardProgressLoop);}}
+  audio.addEventListener('play',()=>requestAnimationFrame(dashboardProgressLoop));
+  audio.addEventListener('pause',syncDashboardVinyl);
   startClock();
   init();
   $('#sortDir').addEventListener('click',()=>{ $('#sortDir').innerHTML=icon(sortAsc?'arrow_upward':'arrow_downward'); });
@@ -452,13 +487,19 @@ body{background-size:cover}
 
 /* Keep the desktop library navigation visible while the song list scrolls. */
 @media (min-width: 1001px) {
+  .layout { display:block; }
   .sidebar {
-    position:sticky;
+    position:fixed;
+    left:0;
     top:74px;
-    height:calc(100vh - 74px);
-    max-height:calc(100vh - 74px);
+    bottom:0;
+    width:238px;
+    height:auto;
     overflow-y:auto;
-    align-self:start;
+    z-index:19;
+  }
+  .main {
+    margin-left:238px;
   }
 }
 
@@ -475,11 +516,45 @@ body{background-size:cover}
 }
 .nav a:hover, .nav a.active, .sidebar-bottom button:hover,
 .song-row:hover, .song-actions button:hover { background:var(--panel2) !important; color:var(--text); }
+.sidebar-bottom { display:none !important; }
 .song-row.playing { background:var(--panel2) !important; }
+.toast { background:var(--panel2) !important; color:var(--text) !important; border:1px solid var(--line); }
+.dashboard-vinyl { position:relative; }
+.dashboard-tonearm { position:absolute; z-index:3; right:4%; top:9%; width:58px; height:170px; transform-origin:50% 15px; transform:rotate(28deg); transition:transform .35s linear; pointer-events:none; }
+.dashboard-tonearm:before { content:""; position:absolute; top:0; left:50%; width:24px; height:24px; transform:translateX(-50%); border-radius:50%; background:linear-gradient(145deg,#e9ecf5,#777e93); border:2px solid #343b4d; box-shadow:0 4px 10px #000b; }
+.dashboard-tonearm:after { content:""; position:absolute; top:19px; left:50%; width:8px; height:127px; transform:translateX(-50%); border-radius:4px; background:linear-gradient(90deg,#8a91a4,#eef0f7,#6e7588); box-shadow:0 5px 8px #0008; }
+.dashboard-tonearm i { position:absolute; z-index:2; bottom:5px; left:50%; width:18px; height:25px; transform:translateX(-50%); border-radius:3px; background:#4c5365; }
+.lyrics-panel .lyric-line { padding:4px 10px; color:var(--muted); transition:color .2s,transform .2s; }
+.lyrics-panel .lyric-line.active { color:var(--text); transform:scale(1.04); font-weight:700; }
+.song-list-head {
+  display:grid;
+  grid-template-columns:42px 42px minmax(180px,1fr) minmax(150px,24%) 80px 105px;
+  align-items:center;
+  gap:12px;
+  padding:0 12px 8px;
+  color:var(--muted);
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+@media (min-width:701px) {
+  #songList .song-row {
+    grid-template-columns:42px 42px minmax(180px,1fr) minmax(150px,24%) 80px 105px;
+  }
+  #songList .song-index { grid-column:1; }
+  #songList .song-cover { grid-column:2; grid-row:1; }
+  #songList .song-main { grid-column:3; }
+  #songList .song-main .song-artist { display:none; }
+  #songList .song-album { display:none; }
+  #songList .song-genre { grid-column:4; }
+  #songList .song-duration { grid-column:5; }
+  #songList .song-actions { grid-column:6; }
+}
 .mobile-player { color:var(--text); }
 [data-theme="dark"] .mobile-player,
 [data-theme="light"] .mobile-player { background:var(--bg) !important; }
 [data-theme="custom"] .mobile-player { background:transparent !important; }
+@media (max-width:700px) { .song-list-head { display:none; } }
 
 /* Long titles remain readable in both mini-player rows. */
 .mini-player strong, .mini-player span {
