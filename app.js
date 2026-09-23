@@ -7,9 +7,9 @@
   const COVER_EXT = /\.(jpg|jpeg|png|webp|gif|svg)$/i;
   const KEY = 'gh-music-state-v1';
   const defaultState = { songs: [], queue: [], playlists: {}, favorites: [], history: [], settings: { volume: .85, theme: 'dark', repoOwner: '', repoName: '', branch: 'main', dataSaver: false, normalize: false, accent: '#a58bff', sleep: 0, eq: [0,0,0,0,0], eqPreset: 'Flat' }, playback: { current: null, time: 0, shuffle: false, repeat: 'off' }, cache: { tree: null, at: 0, sha: '' } };
+  const clone = o => JSON.parse(JSON.stringify(o));
   let state = loadState();
   let view = 'home', sortAsc = true, contextSong = null, db, audioCtx, sourceNode, gainNode, eqNodes = [], wakeLock = null, sleepTimer = null, playbackSave = 0;
-  const clone = o => JSON.parse(JSON.stringify(o));
   function loadState() { try { return Object.assign(clone(defaultState), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (_) { return clone(defaultState); } }
   function saveState() { localStorage.setItem(KEY, JSON.stringify(state)); persistDb('state', state).catch(()=>{}); }
   function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
