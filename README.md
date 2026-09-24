@@ -1,9 +1,86 @@
-# GitHub Music Player
+# GitHub Music Player（GitHub 線上音樂播放器）
 
-https://stanley500kg.github.io/music-player/
+線上網址：<https://stanley500kg.github.io/music-player/>
 
-Put supported audio files (`MP3`, `WAV`, `OGG`, `M4A`, `FLAC`, `AAC`, or `Opus`) in `music/`, and optional artwork in `picture/`. Enable GitHub Pages for the repository root. The app discovers the repository from the Pages URL; for local preview, open Settings and enter `owner / repository` and the branch.
+從 GitHub repository 的 `music/` 資料夾讀取音樂，在瀏覽器中串流播放的靜態網頁播放器。整個程式就是一個 `index.html`，不需要後端、不需要建置，也不需要安裝任何 npm 套件。
 
-The player is a static, dependency-free PWA. It includes queue and playlist persistence, IndexedDB/localStorage backup, GitHub tree caching and incremental refresh, responsive desktop/mobile players, Favorites and History, filename/embedded metadata fallback, dynamic cover background, EQ presets, normalization, sleep timer, Media Session, Wake Lock, Picture-in-Picture graceful fallback, LRC lyrics, context menus, offline shell caching, and GitHub Pages subpath-safe assets.
+## 使用方式
 
-No downloaded dependencies or generated binaries are required.
+1. 把音樂檔放進 `music/`。支援：`MP3`、`WAV`、`OGG`、`M4A`、`FLAC`、`AAC`、`Opus`。
+2. （選用）封面圖放進 `picture/`，歌詞 `.lrc` 放在歌曲旁邊（同資料夾、同檔名）。
+3. 在 repository 設定中啟用 GitHub Pages（發佈根目錄）。
+4. 開啟 Pages 網址即可。網頁會從網址判斷 owner 與 repository；本機預覽時請到「設定」手動輸入 `owner / repository` 與 branch。
+5. repository 需要是公開的（程式不帶登入憑證）。
+
+### 歌曲檔名
+
+建議命名為 `歌手 - 歌名.mp3`。程式用 ` - `、` — ` 或底線 `_` 切開檔名，最後一段當歌名、第一段當歌手；沒有分隔符時歌手為 Unknown Artist。檔名裡的底線也會被當成分隔符。
+
+### 封面圖來源
+
+| 模式 | 封面來源（依序） |
+| --- | --- |
+| 一般模式（Data Saver 關閉） | 音檔內嵌封面（僅 MP3 的 ID3v2，**播放到該首歌時**才讀取）→ `picture/` → 預設圖 `picture/logo.png` |
+| 節約模式（Data Saver 開啟） | `picture/` → 預設圖 |
+
+`picture/` 的封面格式可為 `jpg`、`jpeg`、`png`、`webp`、`gif`、`svg`，檔名（不含副檔名）需與歌曲完整檔名或歌名部分相同，不分大小寫，標點視為相同。之後才新增封面時，按右上角同步按鈕即可更新（GitHub 圖片 CDN 可能有數分鐘延遲）。
+
+## 功能
+
+- **曲庫**：全部歌曲、我的最愛、最近播放、最常播放、播放佇列（可拖曳排序）、播放清單、專輯 / 歌手 / 類型分類、搜尋與排序。
+- **播放**：隨機、重複（關閉 / 全部 / 單曲）、5 段等化器、音量標準化、睡眠計時（15 / 30 / 60 分鐘）、LRC 歌詞同步、空白鍵播放 / 暫停。
+- **系統整合**：Media Session（鎖定畫面與耳機按鍵）、Wake Lock（播放時螢幕不休眠）、子母畫面（不支援時會提示）。
+- **介面**：桌面與手機版面、全螢幕黑膠唱片播放畫面、主題（Dark / Light / Custom background / Album cover）、可自訂首頁文字與背景圖。
+- **資料**：可匯出 / 匯入我的最愛（JSON）。
+
+### 主題
+
+- **Custom background**：使用你在設定中上傳的背景圖，沒上傳時為深色。
+- **Album cover**：背景隨目前播放歌曲的封面改變，可選「主題色」（取封面平均色）或「直接用專輯圖」。
+
+### 音量標準化
+
+開啟後：
+1. 若 MP3 內有 ReplayGain 標籤（`REPLAYGAIN_TRACK_GAIN`，需一般模式讀取標籤），依標籤調整音量，並用峰值資訊避免爆音。
+2. 沒有標籤時，播放中即時量測音量並緩慢調整到接近固定目標（調整範圍 −10 dB 至 +6 dB）。
+3. 輸出端有限幅器，防止放大後破音。
+
+### Data Saver（節約模式）
+
+**開啟時**：GitHub 檔案清單快取由 10 分鐘延長為 24 小時，並且不讀取 MP3 內嵌標籤與封面（封面改用 `picture/`，沒有就用預設圖）。**關閉時**（預設）會讀取內嵌標籤與封面，每首歌約多幾個小請求。
+
+## 資料存放在哪裡
+
+音樂**不會**被下載或保存到你的電腦。播放時瀏覽器直接從 `raw.githubusercontent.com` 串流，資料放在記憶體緩衝區，切歌或關閉分頁後釋放。內嵌封面只存在記憶體中，重新整理後消失。
+
+存在瀏覽器裡的資料：
+
+- `localStorage`：歌曲清單文字資料、佇列、播放清單、我的最愛、播放紀錄、設定、GitHub 檔案樹快取（不含音樂內容與背景圖）。容量不足時會自動改存精簡版本。
+- `IndexedDB`：上述資料的備份，以及你上傳的自訂背景圖。
+
+其他說明：
+
+- 目前**沒有** Service Worker，因此沒有離線模式，也沒有 Cache Storage。
+- 瀏覽器本身可能把串流過的音訊片段暫存在自己的 HTTP 快取，由瀏覽器管理，容量滿了或過期會自動清掉。
+- 只有你手動按「Download」或匯出時，才會在電腦上產生檔案。
+
+### 如何清除
+
+- 清除播放器資料：瀏覽器網站設定中對本網站選「清除資料」（或開發者工具 Application → Clear site data）。
+- 清除瀏覽器暫存：「清除瀏覽資料」勾選「快取的圖片和檔案」。
+- 已加到主畫面的話，清除網站資料或解除安裝即可。
+
+## 會連到的外部服務
+
+| 服務 | 用途 |
+| --- | --- |
+| `api.github.com` | 取得 repository 檔案清單（未登入有每小時請求上限，失敗時改用本機快取） |
+| `raw.githubusercontent.com` | 讀取音樂、封面、歌詞 |
+| Google Fonts | Roboto 字型與 Material Icons 圖示 |
+
+## 已知限制
+
+- 沒有離線模式：需要 Service Worker 快取介面檔案，音樂檔另需自行處理串流快取，目前未實作。
+- 內嵌標籤與封面只支援 MP3（ID3v2）；其他格式使用檔名解析與 `picture/`。
+- 內嵌封面要播放過該首歌才會出現，列表中未播放的歌顯示 `picture/` 的封面或預設圖。
+- `localStorage` 額度約 5 MB；超過時寫入會失敗，程式已改為先存精簡版本，但歌曲極多時重新整理後部分紀錄仍可能不是最新。
